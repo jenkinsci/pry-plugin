@@ -61,7 +61,7 @@ public class PryCommand extends CLICommand {
 
         require("launcher");
         Ruby vm = ruby.getRuntime();
-        callMethod(eval("Launcher"), "start", new RubyIO(vm, stdin), new RubyIO(vm, stdout), this);
+        callMethod(eval("Launcher"), "start", Jenkins.getInstance(), new RubyIO(vm, stdin), new RubyIO(vm, stdout), this);
         return 0;
     }
 
@@ -112,10 +112,10 @@ public class PryCommand extends CLICommand {
                 public List<String> complete(String s) {
                     Ruby vm = completer.getRuntime();
                     IRubyObject out = completer.call(vm.getCurrentContext(), new IRubyObject[]{vm.newString(s)});
-                    System.out.println(out);
                     List<String>  r = new ArrayList<String>();
                     for (Object o : (List)out.toJava(List.class)) {
-                        r.add(o.toString());
+                        if (o!=null)
+                            r.add(o.toString());
                     }
                     return r;
                 }
@@ -145,14 +145,25 @@ public class PryCommand extends CLICommand {
         }
 
         public String call() throws IOException {
-            ConsoleReader cr = new ConsoleReader();
-            cr.addCompletor(new Completor() {
+            // use a single instance to retain history
+            ConsoleReader cr = ConsoleReaderHolder.INSTANCE;
+            Completor comp = new Completor() {
                 public int complete(String buffer, int cursor, List candidates) {
-                    candidates.addAll(proxy.complete(buffer));
+                    try {
+                        candidates.addAll(proxy.complete(buffer));
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        // if we fail to complete, no big deal
+                    }
                     return 0;
                 }
-            });
-            return cr.readLine(prompt);
+            };
+            cr.addCompletor(comp);
+            try {
+                return cr.readLine(prompt);
+            } finally {
+                cr.removeCompletor(comp);
+            }
         }
 
         private static final long serialVersionUID = 1L;

@@ -3,7 +3,7 @@ require 'pry'
 
 class Launcher
     # bootstraps Pry.
-    def self.start(i,o,cmd)
+    def self.start(root,i,o,cmd)
         Pry.config.pager=false;
         o.sync = true;      # otherwise you don't see output until it spills from the buffer
 
@@ -28,6 +28,6 @@ class Launcher
         i.out = o
         i.cmd = cmd
 
-        Pry.start(nil, :input => i, :output => o)
+        Pry.start(root, :input => i, :output => o)
     end
 end
